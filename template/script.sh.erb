@@ -6,20 +6,6 @@ echo "TIMING - Starting main script at: $(date)"
 # Set working directory to home directory
 cd "${HOME}"
 
-<%- if context.default_kernel == "/software/openondemand/jupyter/jupyter-ood.sif" %>
-
-export TENSORBOARD_BINARY="/miniconda/envs/ml-data-science-kernel-py310/bin/tensorboard"
-export TENSORBOARD_PROXY_URL="/node/${host}/${port}/proxy/%PORT%/"
-
-eval "$(/miniconda/bin/conda shell.bash hook)"
-
-if [[ `which conda` != "/miniconda/bin/conda" ]]
-then
-    export PATH="/miniconda/bin:$PATH"
-fi
-
-<%- elsif context.default_kernel == "/software/rhel8/quest_ondemand/quest_ood_jupyter/rhel8-jupyter-new-ml-data-science.sif" %>
-
 export TENSORBOARD_BINARY="/miniconda/envs/ml-data-science-kernel-py311/bin/tensorboard"
 export TENSORBOARD_PROXY_URL="/node/${host}/${port}/proxy/%PORT%/"
 
@@ -29,45 +15,6 @@ if [[ `which conda` != "/miniconda/bin/conda" ]]
 then
     export PATH="/miniconda/bin:$PATH"
 fi
-
-
-<%- elsif context.default_kernel == "/software/rhel8/quest_ondemand/quest_ood_codex/workshop-040825.sif" %>
-
-export TENSORBOARD_BINARY="/miniconda/envs/codex-workshop-py311/bin/tensorboard"
-export TENSORBOARD_PROXY_URL="/node/${host}/${port}/proxy/%PORT%/"
-
-/miniconda/envs/codex-workshop-py311/bin/mlflow server --host 0.0.0.0 --port $MLFLOW_PORT &
-export MLFLOW_TRACKING_URI="http://127.0.0.1:$MLFLOW_PORT"
-
-export OLLAMA_HOST=0.0.0.0:${OLLAMA_PORT} #what should our IP address be?
-
-#start Ollama service
-ollama serve &> <%= session.staged_root %>/serve_ollama_${SLURM_JOBID}.log &
-
-eval "$(/miniconda/bin/conda shell.bash hook)"
-
-if [[ `which conda` != "/miniconda/bin/conda" ]]
-then
-    export PATH="/miniconda/bin:$PATH"
-fi
-
-<%- elsif context.default_kernel == "/software/rhel8/quest_ondemand/quest_ood_jupyter/niche-compass/nichecompass_jupyter.sif" %>
-
-eval "$(/opt/conda/bin/conda shell.bash hook)"
-
-if [[ `which conda` != "/opt/conda/bin/conda" ]]
-then
-    export PATH="/opt/conda/bin/:$PATH"
-fi
-source activate nicheenv 
-
-<%- elsif context.default_kernel == "/software/rhel8/quest_ondemand/quest_ood_jupyter/pyvista/pyvista.sif" %>
-
-export DISPLAY=:99.0
-export PYVISTA_OFF_SCREEN=true
-Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-
-<%- end %>
 
 <%- if context.jupyterlab_switch == "1" %>
 jupyter lab --config="${CONFIG_FILE}"
