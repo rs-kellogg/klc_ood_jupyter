@@ -1,0 +1,76 @@
+# This script (`before.sh.erb`) is sourced directly into the main Bash script
+# that is run when the batch job starts up. It is called before the `script.sh`
+# is forked off into a separate process.
+#
+# There are some helpful Bash functions that are made available to this script
+# that encapsulate commonly used routines when initializing a web server:
+#
+#   - find_port
+#       Find available port in range [$1..$2]
+#       Default: 2000 65535
+#
+#   - create_passwd
+#       Generate random alphanumeric password with $1 characters
+#       Default: 32
+#
+# We **MUST** supply the following environment variables in this
+# `before.sh.erb` script so that a user can connect back to the web server when
+# it is running (case-sensitive variable names):
+#
+#   - $host (already defined earlier, so no need to define again)
+#       The host that the web server is listening on
+#
+#   - $port
+#       The port that the web server is listening on
+#
+#   - $password
+#       The plain text password used to authenticate to the web server with
+
+# Export the module function if it exists
+[[ $(type -t module) == "function" ]] && export -f module
+
+# Find available port to run server on
+port=$(find_port localhost 7000 11000 )
+MLFLOW_PORT=$(find_port localhost 7000 11000 )
+OLLAMA_PORT=$(find_port localhost 7000 11000 )
+
+export MLFLOW_PORT
+export OLLAMA_PORT
+
+# Generate SHA1 encrypted password (requires OpenSSL installed)
+SALT="$(create_passwd 16)"
+password="$(create_passwd 16)"
+PASSWORD_SHA1="$(echo -n "${password}${SALT}" | openssl dgst -sha1 | awk '{print $NF}')"
+
+# The `$CONFIG_FILE` environment variable is exported as it is used in the main
+# `script.sh.erb` file when launching the Jupyter Notebook server.
+export CONFIG_FILE="${PWD}/config.py"
+
+# This is for conn_params
+export ssh_tunnel="ssh -L ${port}:localhost:${port} $USER@login.quest.northwestern.edu ssh -N -L ${port}:localhost:${port} ${host}"
+export connection_string="http://localhost:${port}/node/${host}/${port}/"
+export staged_root=<%= session.staged_root.join("connection.yml") %>
+export mlflow_port=$MLFLOW_PORT
+export default_kernel=<%= context.default_kernel %>
+
+<%- if context.gres_value != "" %>
+# If the user requested a GPU, then we need to add this argument to our job submit command
+export number_of_gpu_cards=`nvidia-smi -L | grep -o 'NVIDIA.*' | wc -l`
+export type_of_gpu_cards=`nvidia-smi -L | grep -o 'NVIDIA.*' | awk '{print $1, $2, $3, $4}' | uniq | cut -d'(' -f1 | uniq`
+<%- end %>
+
+# Generate Jupyter configuration file with secure file permissions
+(
+umask 077
+cat > "${CONFIG_FILE}" << EOL
+c.NotebookApp.ip = '0.0.0.0'
+c.NotebookApp.port = ${port}
+c.NotebookApp.port_retries = 0
+c.NotebookApp.password = u'sha1:${SALT}:${PASSWORD_SHA1}'
+c.NotebookApp.base_url = '/node/${host}/${port}/'
+c.NotebookApp.open_browser = False
+c.NotebookApp.allow_origin = '*'
+c.NotebookApp.notebook_dir = '<%= context.notebook_directory_root == "" ? "${HOME}" : context.notebook_directory_root %>'
+c.NotebookApp.disable_check_xsrf = True
+EOL
+)

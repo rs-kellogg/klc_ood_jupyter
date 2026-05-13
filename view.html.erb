@@ -1,0 +1,56 @@
+<%-
+  base_url  = "/node/#{host}/#{port}"
+  login_url = "#{base_url}/login"
+  next_url  = "#{base_url}/#{jupyter_api}"
+
+  full_url = "#{login_url}?next=#{CGI.escape(next_url)}"
+  form_id = "juypyter_form#{login_url.gsub('/', '_')}"
+  jupyter_connection_info = OodAppkit.files.url(path: staged_root).to_s
+%>
+
+<!-- Zoom on iPad doesn't like opening in a new tab. It won't foward the form parameters. -->
+<script type="text/javascript">
+  function changeTarget() {
+    const agent = navigator.userAgent;
+    if (/Mozilla\/5\.0 \(Macintosh; Intel Mac OS X \d+_\d+_\d+\) AppleWebKit\/\d+\.\d+\.\d+ \(KHTML, like Gecko\)/.test(agent)) {
+      document.getElementById("<%= form_id %>").target = "_self";
+    }
+  }
+</script>
+
+<%- if number_of_gpu_cards != nil %>
+<div>
+<p>Number of GPU Cards Per Node: <%= number_of_gpu_cards %></p>
+<p>NVIDIA GPU Card Type: <%= type_of_gpu_cards %></p>
+</div>
+<%- end %>
+
+<div class="row">
+  <div class="col-md-4">
+    <form id="<%= form_id %>" action="<%= full_url %>" method="post" target="_blank" onsubmit="changeTarget()" >
+      <input type="hidden" name="password" value="<%= password %>">
+      <button class="btn btn-primary" type="submit">
+        <i class="fa fa-cogs"></i> Connect to Jupyter
+      </button>
+    </form>
+  </div>
+
+<%- if default_kernel == "/software/rhel8/quest_ondemand/quest_ood_codex/workshop-040825.sif" %>
+  <div class="col-md-4">
+    <a class="btn btn-primary" target="_blank" href="/rnode/<%= host %>/<%= mlflow_port %>/">
+      <i class="fa fa-star"></i> Connect to MLFlow UI
+    </a>
+  </div>
+<%- end %>
+
+</div>
+<p>
+To connect to this jupyter server in your own local VSCode application, please open a terminal on your local computer and run the following command: <code><%= ssh_tunnel %></code>
+<p>
+<p>
+Once you have done this, go to "Select Another Kernel", then select "Existing Jupyter Server", and paste following URL: <code><%= connection_string %></code>
+<p>
+<p>
+At this point, you will be asked for a password, which you can find here: <a href="<%= jupyter_connection_info %>">connection.yml</a> 
+<p>
+
