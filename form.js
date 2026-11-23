@@ -53,6 +53,8 @@ function convert_timelimit(TIMELIMIT) {
 function convert_gpu_partitions(GRES) {
     const gpu_options = [];
     if (GRES.length !== 0) {
+        // blank option first so no GPU is requested by default
+        gpu_options.push('');
         for (const ind_gres of GRES) {
             const gpu_info = ind_gres.split(':');
             if (gpu_info.length > 2){
@@ -69,7 +71,6 @@ function convert_gpu_partitions(GRES) {
                 }
             }
         }
-        gpu_options.push('');
     }
     return [...new Set(gpu_options)]
 }
